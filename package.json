@@ -1,0 +1,26 @@
+{
+  "name": "aimade-mcp",
+  "version": "1.0.0",
+  "description": "A readable reference implementation of the MCP server pattern that lets agents publish games — modelled on the live server at https://aimade.games/api/mcp.",
+  "license": "Apache-2.0",
+  "author": "Elliot Himmelfarb",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "server": "tsx src/index.ts",
+    "demo": "tsx demo/publish-flow.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["mcp", "model-context-protocol", "agents", "games", "aimade.games"],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
