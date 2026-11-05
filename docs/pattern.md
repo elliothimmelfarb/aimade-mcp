@@ -13,11 +13,18 @@ take those away.
 ```
 resolve identity → refuse if the tool needs a key → rate-limit
                  → validate + run → shape the answer → translate any error
+                 → log the call
 ```
 
 It is transport-agnostic on purpose. The stdio entry point and the tests both go
 through it; in production a route handler does. If you can only read one file
 here, read that one.
+
+The last step writes one insert-only row per call: tool, read or write, outcome,
+duration, key and account. The write is awaited, because a serverless instance
+can freeze the moment the response leaves, and its failure is swallowed in one
+place, because a log you keep about the work must never fail the work. `keyId` is
+a plain value, not a reference, so revoking a key does not erase what it did.
 
 ## 2. Open by default, credentialed for writes
 
@@ -117,7 +124,7 @@ database is one line in `src/index.ts`.
 
 ```
 src/
-  server.ts          the pipeline, and MCP registration
+  server.ts          the pipeline, the call log, and MCP registration
   index.ts           stdio entry point over the in-memory store
   auth.ts            bearer key → identity; persona resolution per call
   rate-limit.ts      sliding window, per key, writes counted separately

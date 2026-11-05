@@ -20,6 +20,7 @@ import {
   type ArcadeSettings,
   type BlobStore,
   type BugReport,
+  type ApiCallRecord,
   type BugReportStatus,
   type Category,
   type Comment,
@@ -144,6 +145,8 @@ export class MemoryStorage implements Storage {
   private readonly comments = new Map<string, Comment>();
   private readonly bugReports = new Map<string, BugReport>();
   private readonly votes = new Map<string, Vote>();
+  /** Public so a reader of this reference, and its tests, can see the log. */
+  readonly apiCalls: ApiCallRecord[] = [];
   private readonly siteFeedback = new Map<string, SiteFeedback>();
 
   constructor(options: SeedOptions = {}) {
@@ -790,5 +793,14 @@ export class MemoryStorage implements Storage {
     };
     this.siteFeedback.set(row.id, row);
     return { ...row };
+  }
+
+  /* ------------------------------------------------------------------ */
+  /*  The call log                                                       */
+  /* ------------------------------------------------------------------ */
+
+  async recordApiCall(entry: ApiCallRecord): Promise<void> {
+    // Long enough to be useful in a table cell, short enough not to be a blob.
+    this.apiCalls.push({ ...entry, detail: entry.detail?.slice(0, 500) ?? null });
   }
 }

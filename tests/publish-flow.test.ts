@@ -10,7 +10,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { ArcadeMcpServer, parseToolResult, type ToolResult } from '../src/server.js';
 import { MemoryStorage } from '../src/storage/memory.js';
-import { TOOLS } from '../src/tools/index.js';
+import { PUBLIC_TOOLS, TOOLS } from '../src/tools/index.js';
 
 const KEY = 'amg_test_key';
 const OTHER_KEY = 'amg_other_key';
@@ -54,6 +54,16 @@ describe('the registry', () => {
     for (const tool of TOOLS) {
       expect(tool.description.length, `${tool.name} needs a description`).toBeGreaterThan(40);
       expect(tool.summary.length, `${tool.name} needs a summary`).toBeGreaterThan(10);
+    }
+  });
+
+  it('never names a tool that does not exist', () => {
+    const known = new Set(TOOLS.map((t) => t.name));
+    for (const tool of TOOLS) {
+      const named = tool.description.match(/\b[a-z]+(?:_[a-z]+)+\b/g) ?? [];
+      for (const name of named.filter((n) => n !== 'damage_taken')) {
+        expect(known.has(name), `${tool.name} mentions ${name}`).toBe(true);
+      }
     }
   });
 
@@ -381,5 +391,82 @@ describe('rate limiting', () => {
 
     // Reads are a separate, much larger budget.
     ok(await call('whoami'));
+  });
+});
+
+describe('the call log', () => {
+  it('records a successful write against the key and account that made it', async () => {
+    ok(await call('create_game', { title: 'Logged' }));
+    expect(storage.apiCalls.at(-1)).toMatchObject({
+      tool: 'create_game',
+      mutates: true,
+      outcome: 'ok',
+      keyId: expect.any(String),
+      accountId: expect.any(String),
+      detail: null,
+    });
+  });
+
+  it('records a keyless refusal as denied, with no key attached', async () => {
+    err(await call('create_game', { title: 'Nope' }, null));
+    expect(storage.apiCalls.at(-1)).toMatchObject({
+      tool: 'create_game',
+      outcome: 'denied',
+      keyId: null,
+      accountId: null,
+    });
+  });
+
+  it('records a tool failure with its message, still attributed to the key', async () => {
+    const refusal = err(await call('publish_game', { game: 'no-such-game' }));
+    expect(storage.apiCalls.at(-1)).toMatchObject({
+      outcome: 'error',
+      keyId: expect.any(String),
+      detail: refusal.message,
+    });
+  });
+
+  it('records a rate-limited call', async () => {
+    for (let i = 0; i < 61; i += 1) await call('create_game', { title: `Game ${i}` });
+    expect(storage.apiCalls.at(-1)?.outcome).toBe('rate_limited');
+  });
+
+  it('caps the detail, so a long message cannot turn the log into a blob store', async () => {
+    await storage.recordApiCall({
+      keyId: null,
+      accountId: null,
+      tool: 'whoami',
+      mutates: false,
+      outcome: 'error',
+      durationMs: 1,
+      detail: 'x'.repeat(2000),
+    });
+    expect(storage.apiCalls.at(-1)?.detail).toHaveLength(500);
+  });
+
+  it('never lets a broken log break the call it was logging', async () => {
+    storage.recordApiCall = async () => {
+      throw new Error('log store is down');
+    };
+    expect(ok(await call('create_game', { title: 'Survives' })).game.slug).toBeTruthy();
+  });
+});
+
+describe('the keyless refusal', () => {
+  it('names every public tool, because the list is generated', async () => {
+    const refusal = err(await call('create_game', { title: 'Nope' }, null));
+    for (const tool of PUBLIC_TOOLS) expect(refusal.message).toContain(tool.name);
+  });
+});
+
+describe('covers and screenshots', () => {
+  it('keeps a promoted cover when its screenshot is removed', async () => {
+    const created = ok(await call('create_game', { title: 'Covered' }));
+    const game = created.game.slug;
+    ok(await call('add_screenshot', { game, base64: PNG_BASE64 }));
+    const shots = ok(await call('get_game', { game })).screenshots;
+    const covered = ok(await call('set_cover', { game, screenshotId: shots[0].id }));
+    ok(await call('remove_screenshot', { game, screenshotId: shots[0].id }));
+    expect(ok(await call('get_game', { game })).coverUrl).toBe(covered.coverUrl);
   });
 });

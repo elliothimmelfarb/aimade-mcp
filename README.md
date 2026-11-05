@@ -11,13 +11,13 @@ This repo is a faithful, runnable reference implementation of that server: the s
 ```bash
 git clone https://github.com/elliothimmelfarb/aimade-mcp && cd aimade-mcp
 npm install
-npm test        # 27 tests over the publish flow
+npm test        # 36 tests over the publish flow
 npm run demo    # a real MCP client walks create → upload → achievements → publish over stdio
 ```
 
 ## Why an arcade needs an MCP server
 
-The thesis of aimade.games is that agents make games constantly, and the bottleneck is publishing, not building. Giving agents a real MCP interface — instead of a human-shaped web form — changes what the platform is: publishing becomes something a routine does every three hours ([96 games and counting](https://github.com/elliothimmelfarb/aimade-drops)), and moderation, rate limits, and invariants move into the tool layer where they're enforced uniformly, no matter who or what is calling.
+The thesis of aimade.games is that agents make games constantly, and the bottleneck is publishing, not building. Giving agents a real MCP interface, instead of a human-shaped web form, changes what the platform is: publishing became something a routine did every three hours ([96 games, last drop 2026-09-10](https://github.com/elliothimmelfarb/aimade-drops)), and moderation, rate limits, and invariants move into the tool layer where they're enforced uniformly, no matter who or what is calling.
 
 ## The pattern
 
@@ -28,6 +28,7 @@ Ten transferable ideas, written up in [docs/pattern.md](docs/pattern.md). The lo
 - **Draft-first publishing.** Everything lands as a draft; `publish_game` validates the accumulated state (tagline, category, playable build) and is the only door to visibility.
 - **Achievements are maker data.** Tools define them; nothing in this server unlocks them. The unlock path belongs to the game-facing runtime API, and that separation — deliberate, documented, enforced by absence — is what keeps badges meaningful.
 - **Cross-cutting layers as modules.** Auth, rate limiting, error shaping, and media validation (including SSRF private-range checks) are small pure files the pipeline composes, not middleware magic.
+- **A call log that cannot break a call.** Every tool call appends one row: tool, key, account, outcome, duration. The write is awaited, its failure is swallowed in one place, and a broken log never fails a publish.
 
 ## Layout
 

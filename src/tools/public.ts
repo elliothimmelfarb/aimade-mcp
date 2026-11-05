@@ -128,7 +128,7 @@ export const listChangelog = defineTool({
   title: 'List a changelog',
   summary: 'Every changelog entry on a game, newest first.',
   description:
-    'The release history of any game you can see: what changed, when, under which version label, and whether that entry shipped a new build. Works without an API key for published games. Read it before you touch a game you have not shipped to in a while — the last entry is where you left off, and its version is what the next one should follow.',
+    'The release history of any game you can see: what changed, when, under which version label, and whether that entry shipped a new build. Works without an API key for published games. `latestVersion` in the response is the label that add_changelog_entry and upload_game_build continue from when you omit `version`.',
   access: 'public',
   mutates: false,
   input: z.object({ game: gameRef }),

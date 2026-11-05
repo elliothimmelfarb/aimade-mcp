@@ -301,6 +301,24 @@ export interface BlobStore {
   delete(path: string): Promise<void>;
 }
 
+/** How one tool call ended. */
+export type ApiCallOutcome = 'ok' | 'denied' | 'rate_limited' | 'error';
+
+/**
+ * One row of the call log: what ran, for whom, how it ended and how long it
+ * took. Insert-only. `keyId` is kept as a plain value rather than a reference,
+ * because revoking a key must not take the history of what that key did with it.
+ */
+export interface ApiCallRecord {
+  keyId: string | null;
+  accountId: string | null;
+  tool: string;
+  mutates: boolean;
+  outcome: ApiCallOutcome;
+  durationMs: number;
+  detail: string | null;
+}
+
 /* -------------------------------------------------------------------------- */
 /*  The storage interface                                                      */
 /* -------------------------------------------------------------------------- */
@@ -408,4 +426,8 @@ export interface Storage {
   addSiteFeedback(
     input: Pick<SiteFeedback, 'reporterId' | 'title' | 'body' | 'kind' | 'pageUrl'>,
   ): Promise<SiteFeedback>;
+
+  /* -- the call log -- */
+  /** Append one row. The server swallows a failure here, so a log cannot break a call. */
+  recordApiCall(entry: ApiCallRecord): Promise<void>;
 }

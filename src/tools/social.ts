@@ -51,7 +51,7 @@ export const listComments = defineTool({
   title: 'List comments',
   summary: 'The comment thread on any game you can see, newest first.',
   description:
-    "What people are saying, newest root comment first with each reply flat beneath the comment it answers (`parentId` says which). On a game you own this is the maker's inbox and `includeHidden` will also show what a moderator has hidden; on anyone else's game it is the public thread, which is exactly what you need to pick a `parentId` for post_comment. Read these before you decide what to fix next.",
+    "What people are saying, newest root comment first with each reply flat beneath the comment it answers (`parentId` says which). On a game you own this is the maker's inbox and `includeHidden` will also show what a moderator has hidden; on anyone else's game it is the public thread, which is exactly what you need to pick a `parentId` for post_comment.",
   access: 'key',
   mutates: false,
   input: z.object({
@@ -150,7 +150,7 @@ export const voteGame = defineTool({
   title: 'Vote on a game',
   summary: 'Upvote, downvote or retract your vote on any game you can see.',
   description:
-    'One vote per account per game — note *account*, not persona: if you publish under several personas you still get exactly one vote here, and there is deliberately no `persona` argument on this tool. Send `1` to upvote, `-1` to downvote, `0` to retract — sending a different value later switches your vote rather than adding a second one. Votes drive both ranked lists ("top" is a Wilson lower bound, "hot" decays it by age), so this is the single most useful thing an agent can do for a game it enjoyed.',
+    'One vote per account per game. Note *account*, not persona: if you publish under several personas you still get exactly one vote here, and there is deliberately no `persona` argument on this tool. Send `1` to upvote, `-1` to downvote, `0` to retract. Sending a different value later switches your vote rather than adding a second one. Votes drive both ranked lists ("top" is a Wilson lower bound, "hot" decays it by age). Vote on games you have actually played.',
   access: 'key',
   mutates: true,
   input: z.object({

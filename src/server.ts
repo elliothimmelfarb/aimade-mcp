@@ -6,7 +6,7 @@
  * both go through it. Read it top to bottom and you have the pattern:
  *
  *   resolve identity → refuse if the tool needs a key → rate-limit →
- *   validate + run → shape the answer → translate any error
+ *   validate + run → shape the answer → translate any error → log the call
  *
  * The production instance of this is a Next.js route handler on
  * `mcp-handler` (streamable HTTP) at https://aimade.games/api/mcp. The only
@@ -25,8 +25,8 @@ import {
 import { messageForToolError } from './errors.js';
 import { createLimiter, rateLimitMessage, type Limiter, type RateKind } from './rate-limit.js';
 import { DEFAULT_SITE_URL } from './shape.js';
-import type { Storage } from './storage/types.js';
-import { TOOLS, ToolContext, type ToolDefinition } from './tools/index.js';
+import type { ApiCallOutcome, Storage } from './storage/types.js';
+import { PUBLIC_TOOLS, TOOLS, ToolContext, type ToolDefinition } from './tools/index.js';
 
 export const SERVER_NAME = 'aimade.games';
 export const SERVER_VERSION = '1.0.0';
@@ -118,7 +118,38 @@ export class ArcadeMcpServer {
     return identityFromToken(this.storage, token);
   }
 
+  /**
+   * Write the call to the log.
+   *
+   * Awaited rather than fired and forgotten, because a serverless instance can
+   * be frozen the moment the response is written and a dangling promise is a
+   * row that silently never lands. The failure is swallowed here, in one place,
+   * so a log that breaks can never turn a working call into a broken one.
+   */
+  private async log(
+    tool: ToolDefinition,
+    identity: Identity | null,
+    outcome: ApiCallOutcome,
+    startedAt: number,
+    detail: string | null = null,
+  ): Promise<void> {
+    try {
+      await this.storage.recordApiCall({
+        keyId: identity?.keyId ?? null,
+        accountId: identity?.viewer.account?.id ?? null,
+        tool: tool.name,
+        mutates: tool.mutates,
+        outcome,
+        durationMs: Date.now() - startedAt,
+        detail,
+      });
+    } catch {
+      // Deliberately silent: see above.
+    }
+  }
+
   async callTool(name: string, args: unknown, options: CallOptions = {}): Promise<ToolResult> {
+    const startedAt = Date.now();
     const tool = this.tools.find((t) => t.name === name);
     if (!tool) {
       return textResult({ error: 'unknown_tool', message: `There is no tool called "${name}".` }, true);
@@ -128,24 +159,16 @@ export class ArcadeMcpServer {
     try {
       identity = await this.identify(options.token);
     } catch (err) {
-      return textResult(
-        {
-          error: 'invalid_token',
-          message: err instanceof ApiKeyError ? err.message : 'That API key could not be verified.',
-        },
-        true,
-      );
+      const message = err instanceof ApiKeyError ? err.message : 'That API key could not be verified.';
+      await this.log(tool, null, 'denied', startedAt, message);
+      return textResult({ error: 'invalid_token', message }, true);
     }
 
     if (tool.access === 'key' && !identity.viewer.account) {
-      return textResult(
-        {
-          error: 'authentication_required',
-          message:
-            'This tool needs an API key. Create one at https://aimade.games/settings and send it as `Authorization: Bearer amg_...`. The public tools (search_games, top_games, get_game, list_categories, list_changelog) work without one.',
-        },
-        true,
-      );
+      // Generated from the registry, so this sentence cannot go stale.
+      const message = `This tool needs an API key. Create one at https://aimade.games/settings and send it as \`Authorization: Bearer amg_...\`. The public tools (${PUBLIC_TOOLS.map((t) => t.name).join(', ')}) work without one.`;
+      await this.log(tool, identity, 'denied', startedAt, message);
+      return textResult({ error: 'authentication_required', message }, true);
     }
 
     // Writes are counted separately from reads, and keyless callers are counted
@@ -155,15 +178,21 @@ export class ArcadeMcpServer {
     const bucket = identity.keyId ?? options.clientAddress ?? 'unknown';
     const decision = this.limiter.check(kind, bucket);
     if (!decision.allowed) {
-      return textResult({ error: 'rate_limited', message: rateLimitMessage(kind, decision) }, true);
+      const message = rateLimitMessage(kind, decision);
+      await this.log(tool, identity, 'rate_limited', startedAt, message);
+      return textResult({ error: 'rate_limited', message }, true);
     }
 
     try {
       const ctx = new ToolContext(this.storage, identity, this.siteUrl);
-      return textResult(await tool.run(args, ctx));
+      const result = await tool.run(args, ctx);
+      await this.log(tool, identity, 'ok', startedAt);
+      return textResult(result);
     } catch (err) {
       // Never leak an internal stack or a driver message to a caller.
-      return textResult({ error: 'tool_error', tool: tool.name, message: messageForToolError(err) }, true);
+      const message = messageForToolError(err);
+      await this.log(tool, identity, 'error', startedAt, message);
+      return textResult({ error: 'tool_error', tool: tool.name, message }, true);
     }
   }
 

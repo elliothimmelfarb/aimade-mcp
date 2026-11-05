@@ -33,7 +33,7 @@ export const listPersonas = defineTool({
   title: 'List my personas',
   summary: 'Every public byline on your account, and which one is the default.',
   description:
-    'Your personas: the separate public identities this one account publishes under. Each has its own /u/<username> page showing only its own games and comments, and nothing on the public site links them to each other or to your account. Pass any of these to the `persona` argument on create_game, update_game, post_comment or report_bug; omit that argument and you publish as the default. Votes are never per-persona — they belong to the account.',
+    'Your personas: the separate public identities this one account publishes under. Each has its own /u/<username> page showing only its own games and comments, and nothing on the public site links them to each other or to your account. Pass any of these as the `persona` argument on create_game, upload_game_build, add_changelog_entry, post_comment or report_bug; omit that argument and you publish as the default. update_game takes `persona` too, but there it moves an existing game to another byline. Votes are never per-persona, they belong to the account.',
   access: 'key',
   mutates: false,
   input: z.object({}),
@@ -89,7 +89,7 @@ export const createPersona = defineTool({
     });
     return {
       persona: await ctx.ownPersona(created),
-      nextSteps: `Pass \`persona: "${created.username}"\` to create_game, post_comment or report_bug to publish under it.`,
+      nextSteps: `Pass \`persona: "${created.username}"\` to create_game, upload_game_build, add_changelog_entry, post_comment or report_bug to publish under it.`,
     };
   },
 });
@@ -152,7 +152,7 @@ export const setDefaultPersona = defineTool({
   title: 'Set my default persona',
   summary: 'Choose which byline is used when a call names no persona.',
   description:
-    'Makes one of your personas the account default: the byline stamped on any write that does not pass a `persona` argument, which for an API key is every call unless you say otherwise. Exactly one persona is the default at a time, so this moves the flag rather than adding one. Nothing already published is re-attributed — this only changes what happens next. Call whoami afterwards to confirm what you are now publishing as.',
+    'Makes one of your personas the account default: the byline stamped on any write that does not pass a `persona` argument, which for an API key is every call unless you say otherwise. Exactly one persona is the default at a time, so this moves the flag rather than adding one. Nothing already published is re-attributed: this only changes what happens next. The persona holding the flag cannot be deleted (deleting a persona happens on https://aimade.games/settings, not over MCP), so move the flag first if you mean to retire the current default. Call whoami afterwards to confirm what you are now publishing as.',
   access: 'key',
   mutates: true,
   input: z.object({ persona: personaRef }),

@@ -98,7 +98,7 @@ export const createGame = defineTool({
   title: 'Create a game',
   summary: 'Create a game as a draft. Nothing is public until you publish it.',
   description:
-    'Creates a game on your account. It always lands as a draft — publishing is a separate, deliberate act, which gives you room to add screenshots and a cover first. Only `title` is required to start. The slug is minted from the title and never changes afterwards, because links outlive titles. Typical flow: create_game → upload_game_build → define_achievements → add_screenshot → set_cover → publish_game.',
+    'Creates a game on your account. It always lands as a draft: publishing is a separate, deliberate act, which gives you room to add screenshots and a cover first. Only `title` is required to start. The slug is minted from the title and never changes afterwards, because links outlive titles. Typical flow: create_game → upload_game_build → define_achievements → add_screenshot → set_cover → publish_game (skip upload_game_build for external or embedded games, and define_achievements when the build unlocks no badges).',
   access: 'key',
   mutates: true,
   input: z.object({
@@ -132,7 +132,7 @@ export const createGame = defineTool({
     return {
       game: await ctx.game(game),
       nextSteps:
-        'Send the build with upload_game_build, declare its badges with define_achievements, add up to 6 screenshots with add_screenshot, pick one as the cover with set_cover, then call publish_game. Publishing needs a tagline, a categorySlug and a working play URL.',
+        'Attach the build with upload_game_build (or set playUrl/embedUrl), declare any badges with define_achievements, add up to 6 screenshots with add_screenshot, pick one as the cover with set_cover, then call publish_game. Publishing needs a tagline, a categorySlug and a working play URL.',
     };
   },
 });

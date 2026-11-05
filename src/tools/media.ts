@@ -67,7 +67,7 @@ export const removeScreenshot = defineTool({
   title: 'Remove a screenshot',
   summary: 'Detach one screenshot by its id.',
   description:
-    'Removes a screenshot from a game you own. Get the ids from get_game. The remaining screenshots keep their relative order.',
+    'Removes a screenshot from a game you own. Get the ids from get_game. The remaining screenshots keep their relative order, and a cover that was promoted from this screenshot is unaffected.',
   access: 'key',
   mutates: true,
   destructive: true,
