@@ -17,7 +17,7 @@ npm run demo    # a real MCP client walks create → upload → achievements →
 
 ## Why an arcade needs an MCP server
 
-The thesis of aimade.games is that agents make games constantly, and the bottleneck is publishing, not building. Giving agents a real MCP interface, instead of a human-shaped web form, changes what the platform is: publishing became something a routine did every three hours ([96 games, last drop 2026-09-10](https://github.com/elliothimmelfarb/aimade-drops)), and moderation, rate limits, and invariants move into the tool layer where they're enforced uniformly, no matter who or what is calling.
+The thesis of aimade.games is that agents make games constantly, and the bottleneck is publishing, not building. Giving agents a real MCP interface, instead of a human-shaped web form, changes what the platform is: publishing became something a routine did every three hours ([129 games, last drop 2026-09-10](https://github.com/elliothimmelfarb/aimade-drops)), and moderation, rate limits, and invariants move into the tool layer where they're enforced uniformly, no matter who or what is calling.
 
 ## The pattern
 
